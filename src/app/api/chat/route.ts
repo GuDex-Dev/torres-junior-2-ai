@@ -1,25 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { askGemini } from "@/helper/gemini";
+import { chatWithGemini } from "@/helper/gemini";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const prompt = body.prompt?.trim();
+    const formData = await request.formData();
+    const prompt = formData.get("prompt") as string;
+    const historyJson = formData.get("history") as string;
+    const imageFile = formData.get("image") as File | null;
 
-    if (!prompt) {
+    if (!prompt?.trim()) {
       return NextResponse.json(
-        { error: "El campo 'prompt' es obligatorio." },
+        { error: "El prompt es requerido" },
         { status: 400 }
       );
     }
 
-    const result = await askGemini(prompt);
-    return NextResponse.json({ response: result }, { status: 200 });
+    // Parsear historial
+    let history: { role: "user" | "model"; text: string }[] = [];
+    if (historyJson) {
+      try {
+        history = JSON.parse(historyJson);
+      } catch {
+        // Si falla el parsing, continuar con historial vacío
+      }
+    }
 
+    // Agregar el mensaje actual al historial
+    const messages = [...history, { role: "user" as const, text: prompt }];
+
+    // Llamar a Gemini
+    const response = await chatWithGemini(messages, imageFile || undefined);
+
+    return NextResponse.json({ response });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Error interno del servidor.";
-    console.error("Error en /api/chat:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error en API chat:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }
