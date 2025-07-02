@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chatWithGemini } from "@/helper/gemini";
+import { chatWithGemini } from "@/lib/gemini";
 
 export async function POST(request: NextRequest) {
   try {
