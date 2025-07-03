@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { obtenerProductos } from '@/lib/productos';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, handleImageError, isLocalProductImage } from '@/lib/utils';
 import { Producto } from '@/types/producto';
 
 export default function AdminDashboard() {
@@ -191,16 +191,22 @@ export default function AdminDashboard() {
                 <div key={producto.id} className="border border-amber-100 rounded-lg p-4 hover:shadow-md transition-shadow bg-amber-50">
                   {/* Imagen */}
                   <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden mb-4 border border-amber-200">
-                    <Image
-                      src={getImageUrl(producto.variaciones[0]?.imagen_url, producto.nombre)}
-                      alt={producto.nombre}
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = `https://via.placeholder.com/400x400/FCD34D/ffffff?text=${encodeURIComponent(producto.nombre)}`;
-                      }}
-                    />
+                    {isLocalProductImage(producto.variaciones[0]?.imagen_url) ? (
+                      <img
+                        src={getImageUrl(producto.variaciones[0]?.imagen_url, producto.nombre)}
+                        alt={producto.nombre}
+                        className="w-full h-full object-cover"
+                        onError={(e) => handleImageError(e, producto.nombre)}
+                      />
+                    ) : (
+                      <Image
+                        src={getImageUrl(producto.variaciones[0]?.imagen_url, producto.nombre)}
+                        alt={producto.nombre}
+                        fill
+                        className="object-cover"
+                        onError={(e) => handleImageError(e, producto.nombre)}
+                      />
+                    )}
                     {/* Badge de estado */}
                     <div className="absolute top-2 right-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${

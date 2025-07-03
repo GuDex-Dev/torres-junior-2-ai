@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { obtenerProductoPorId, actualizarProducto } from '@/lib/productos';
-import { getImageUrl } from '@/lib/utils';
-import { ProductoForm, Talla, Producto } from '@/types/producto';
+import { getImageUrl, handleImageError, isLocalProductImage } from '@/lib/utils';
+import { ProductoForm, Talla } from '@/types/producto';
 
 export default function EditarProducto() {
   const params = useParams();
@@ -306,16 +306,22 @@ export default function EditarProducto() {
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Imagen Actual</label>
                   <div className="relative w-32 h-32 border border-amber-200 rounded-lg overflow-hidden">
-                    <Image
-                      src={getImageUrl(variacion.imagen_url, form.nombre)} 
-                      alt="Imagen actual" 
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = `data:image/svg+xml;base64,${btoa(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="#FCD34D"/><text x="100" y="100" font-family="Arial" font-size="16" fill="white" text-anchor="middle" dominant-baseline="middle">${form.nombre.substring(0, 10)}</text></svg>`)}`;
-                      }}
-                    />
+                    {isLocalProductImage(variacion.imagen_url) ? (
+                      <img
+                        src={getImageUrl(variacion.imagen_url, form.nombre)} 
+                        alt="Imagen actual" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => handleImageError(e, form.nombre)}
+                      />
+                    ) : (
+                      <Image
+                        src={getImageUrl(variacion.imagen_url, form.nombre)} 
+                        alt="Imagen actual" 
+                        fill
+                        className="object-cover"
+                        onError={(e) => handleImageError(e, form.nombre)}
+                      />
+                    )}
                   </div>
                 </div>
               )}

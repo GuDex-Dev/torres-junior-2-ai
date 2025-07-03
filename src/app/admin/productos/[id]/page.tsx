@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { obtenerProductoPorId, eliminarProducto } from '@/lib/productos';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, handleImageError, isLocalProductImage } from '@/lib/utils';
 import { Producto } from '@/types/producto';
 
 export default function DetalleProducto() {
@@ -150,16 +150,22 @@ export default function DetalleProducto() {
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-600 mb-2">Imagen</label>
                     <div className="relative w-48 h-48 bg-gray-100 rounded-lg overflow-hidden border border-amber-200">
-                      <Image
-                        src={getImageUrl(variacion.imagen_url, producto.nombre)}
-                        alt={`${producto.nombre} - Variación ${index + 1}`}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://via.placeholder.com/400x400/FCD34D/ffffff?text=${encodeURIComponent(producto.nombre)}`;
-                        }}
-                      />
+                      {isLocalProductImage(variacion.imagen_url) ? (
+                        <img
+                          src={getImageUrl(variacion.imagen_url, producto.nombre)}
+                          alt={`${producto.nombre} - Variación ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => handleImageError(e, producto.nombre)}
+                        />
+                      ) : (
+                        <Image
+                          src={getImageUrl(variacion.imagen_url, producto.nombre)}
+                          alt={`${producto.nombre} - Variación ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          onError={(e) => handleImageError(e, producto.nombre)}
+                        />
+                      )}
                     </div>
                   </div>
                   
