@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { obtenerProductos } from '@/lib/productos';
-import { getImageUrl, handleImageError, isLocalProductImage } from '@/lib/utils';
+import {
+  getImageUrl,
+  handleImageError,
+  isLocalProductImage,
+} from '@/lib/utils';
 import { Producto } from '@/types/producto';
 
 export default function AdminDashboard() {
@@ -28,24 +32,34 @@ export default function AdminDashboard() {
   };
 
   const productosFiltrados = productos.filter(producto => {
-    const matchNombre = producto.nombre.toLowerCase().includes(filtro.toLowerCase());
-    const matchCategoria = categoriaFiltro === '' || producto.categoria === categoriaFiltro;
+    const matchNombre = producto.nombre
+      .toLowerCase()
+      .includes(filtro.toLowerCase());
+    const matchCategoria =
+      categoriaFiltro === '' || producto.categoria === categoriaFiltro;
     return matchNombre && matchCategoria;
   });
 
   const categorias = [...new Set(productos.map(p => p.categoria))];
 
   const getTotalStock = (producto: Producto) => {
-    return producto.variaciones.reduce((total, variacion) => 
-      total + variacion.tallas.reduce((sum, talla) => sum + talla.cantidad, 0), 0
+    return producto.variaciones.reduce(
+      (total, variacion) =>
+        total +
+        variacion.tallas.reduce((sum, talla) => sum + talla.cantidad, 0),
+      0
     );
   };
 
   const getPrecioRango = (producto: Producto) => {
-    const precios = producto.variaciones.flatMap(v => v.tallas.map(t => t.precio));
+    const precios = producto.variaciones.flatMap(v =>
+      v.tallas.map(t => t.precio)
+    );
     const min = Math.min(...precios);
     const max = Math.max(...precios);
-    return min === max ? `S/ ${min.toFixed(2)}` : `S/ ${min.toFixed(2)} - S/ ${max.toFixed(2)}`;
+    return min === max
+      ? `S/ ${min.toFixed(2)}`
+      : `S/ ${min.toFixed(2)} - S/ ${max.toFixed(2)}`;
   };
 
   if (loading) {
@@ -60,8 +74,12 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
-        <p className="text-amber-600 mt-2">Gestiona el catálogo de productos de Torres Jr. 2</p>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Panel de Administración
+        </h1>
+        <p className="text-amber-600 mt-2">
+          Gestiona el catálogo de productos de Torres Jr. 2
+        </p>
       </div>
 
       {/* Stats */}
@@ -72,8 +90,12 @@ export default function AdminDashboard() {
               <span className="text-2xl">📦</span>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Productos</p>
-              <p className="text-2xl font-bold text-gray-900">{productos.length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Productos
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {productos.length}
+              </p>
             </div>
           </div>
         </div>
@@ -84,7 +106,9 @@ export default function AdminDashboard() {
               <span className="text-2xl">✅</span>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Productos Activos</p>
+              <p className="text-sm font-medium text-gray-600">
+                Productos Activos
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {productos.filter(p => p.activo).length}
               </p>
@@ -99,7 +123,9 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Categorías</p>
-              <p className="text-2xl font-bold text-gray-900">{categorias.length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {categorias.length}
+              </p>
             </div>
           </div>
         </div>
@@ -123,26 +149,32 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-orange-100">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Buscar por nombre</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Buscar por nombre
+            </label>
             <input
               type="text"
               value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
+              onChange={e => setFiltro(e.target.value)}
               placeholder="Buscar productos..."
               className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
             />
           </div>
-          
+
           <div className="md:w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por categoría</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filtrar por categoría
+            </label>
             <select
               value={categoriaFiltro}
-              onChange={(e) => setCategoriaFiltro(e.target.value)}
+              onChange={e => setCategoriaFiltro(e.target.value)}
               className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
             >
               <option value="">Todas las categorías</option>
               {categorias.map(categoria => (
-                <option key={categoria} value={categoria}>{categoria}</option>
+                <option key={categoria} value={categoria}>
+                  {categoria}
+                </option>
               ))}
             </select>
           </div>
@@ -169,12 +201,13 @@ export default function AdminDashboard() {
           {productosFiltrados.length === 0 ? (
             <div className="text-center py-12">
               <span className="text-6xl mb-4 block">📦</span>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No hay productos</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No hay productos
+              </h3>
               <p className="text-gray-600 mb-4">
-                {productos.length === 0 
-                  ? 'Comienza creando tu primer producto' 
-                  : 'No se encontraron productos con los filtros actuales'
-                }
+                {productos.length === 0
+                  ? 'Comienza creando tu primer producto'
+                  : 'No se encontraron productos con los filtros actuales'}
               </p>
               {productos.length === 0 && (
                 <Link
@@ -187,33 +220,46 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {productosFiltrados.map((producto) => (
-                <div key={producto.id} className="border border-amber-100 rounded-lg p-4 hover:shadow-md transition-shadow bg-amber-50">
+              {productosFiltrados.map(producto => (
+                <div
+                  key={producto.id}
+                  className="border border-amber-100 rounded-lg p-4 hover:shadow-md transition-shadow bg-amber-50"
+                >
                   {/* Imagen */}
                   <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden mb-4 border border-amber-200">
-                    {isLocalProductImage(producto.variaciones[0]?.imagen_url) ? (
+                    {isLocalProductImage(
+                      producto.variaciones[0]?.imagen_url
+                    ) ? (
                       <img
-                        src={getImageUrl(producto.variaciones[0]?.imagen_url, producto.nombre)}
+                        src={getImageUrl(
+                          producto.variaciones[0]?.imagen_url,
+                          producto.nombre
+                        )}
                         alt={producto.nombre}
                         className="w-full h-full object-cover"
-                        onError={(e) => handleImageError(e, producto.nombre)}
+                        onError={e => handleImageError(e, producto.nombre)}
                       />
                     ) : (
                       <Image
-                        src={getImageUrl(producto.variaciones[0]?.imagen_url, producto.nombre)}
+                        src={getImageUrl(
+                          producto.variaciones[0]?.imagen_url,
+                          producto.nombre
+                        )}
                         alt={producto.nombre}
                         fill
                         className="object-cover"
-                        onError={(e) => handleImageError(e, producto.nombre)}
+                        onError={e => handleImageError(e, producto.nombre)}
                       />
                     )}
                     {/* Badge de estado */}
                     <div className="absolute top-2 right-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        producto.activo 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          producto.activo
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
                         {producto.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </div>
@@ -221,17 +267,29 @@ export default function AdminDashboard() {
 
                   {/* Información */}
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-gray-900 truncate">{producto.nombre}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2">{producto.descripcion}</p>
-                    
+                    <h3 className="font-semibold text-gray-900 truncate">
+                      {producto.nombre}
+                    </h3>
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {producto.descripcion}
+                    </p>
+
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-amber-600 font-medium">{producto.categoria}</span>
-                      <span className="text-gray-500">{producto.variaciones.length} variaciones</span>
+                      <span className="text-amber-600 font-medium">
+                        {producto.categoria}
+                      </span>
+                      <span className="text-gray-500">
+                        {producto.variaciones.length} variaciones
+                      </span>
                     </div>
 
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700 font-medium">{getPrecioRango(producto)}</span>
-                      <span className="text-gray-500">Stock: {getTotalStock(producto)}</span>
+                      <span className="text-gray-700 font-medium">
+                        {getPrecioRango(producto)}
+                      </span>
+                      <span className="text-gray-500">
+                        Stock: {getTotalStock(producto)}
+                      </span>
                     </div>
                   </div>
 

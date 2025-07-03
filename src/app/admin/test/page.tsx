@@ -39,16 +39,16 @@ export default function TestPage() {
             imagen_url: '/productos/test-image.jpg',
             tallas: [
               { talla: '12', cantidad: 5, precio: 29.99 },
-              { talla: '14', cantidad: 3, precio: 31.99 }
-            ]
-          }
+              { talla: '14', cantidad: 3, precio: 31.99 },
+            ],
+          },
         ],
-        activo: true
+        activo: true,
       };
-      
+
       const id = await crearProducto(nuevoProducto);
       setMensaje(`✅ Producto creado con ID: ${id}`);
-      
+
       // Actualizar lista
       await testObtenerProductos();
     } catch (error) {
@@ -60,7 +60,7 @@ export default function TestPage() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Test Conexión Firebase</h1>
-      
+
       <div className="space-y-4 mb-6">
         <button
           onClick={testObtenerProductos}
@@ -69,7 +69,7 @@ export default function TestPage() {
         >
           {loading ? 'Cargando...' : 'Test Obtener Productos'}
         </button>
-        
+
         <button
           onClick={testCrearProducto}
           disabled={loading}
@@ -80,20 +80,30 @@ export default function TestPage() {
       </div>
 
       {mensaje && (
-        <div className={`p-4 rounded-lg mb-4 ${mensaje.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <div
+          className={`p-4 rounded-lg mb-4 ${
+            mensaje.includes('✅')
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
           {mensaje}
         </div>
       )}
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">Productos ({productos.length})</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Productos ({productos.length})
+        </h2>
         <div className="space-y-2">
-          {productos.map((producto) => (
+          {productos.map(producto => (
             <div key={producto.id} className="bg-white p-4 rounded-lg shadow">
               <h3 className="font-medium">{producto.nombre}</h3>
               <p className="text-sm text-gray-600">{producto.descripcion}</p>
               <p className="text-xs text-gray-500">ID: {producto.id}</p>
-              <p className="text-xs text-gray-500">Variaciones: {producto.variaciones.length}</p>
+              <p className="text-xs text-gray-500">
+                Variaciones: {producto.variaciones.length}
+              </p>
             </div>
           ))}
         </div>

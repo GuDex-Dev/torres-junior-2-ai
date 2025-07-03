@@ -9,19 +9,25 @@ export async function POST(request: NextRequest) {
     const file: File | null = data.get('file') as unknown as File;
 
     if (!file) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'No file found' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No file found',
+        },
+        { status: 400 }
+      );
     }
 
     // Validar tipo de archivo
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Tipo de archivo no permitido. Solo JPEG, PNG y WEBP.' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Tipo de archivo no permitido. Solo JPEG, PNG y WEBP.',
+        },
+        { status: 400 }
+      );
     }
 
     // Crear nombre único para el archivo
@@ -45,17 +51,19 @@ export async function POST(request: NextRequest) {
     // Retornar URL pública
     const publicUrl = `/productos/${filename}`;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       url: publicUrl,
-      filename: filename
+      filename: filename,
     });
-
   } catch (error) {
     console.error('Error uploading file:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Error interno del servidor' 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Error interno del servidor',
+      },
+      { status: 500 }
+    );
   }
 }

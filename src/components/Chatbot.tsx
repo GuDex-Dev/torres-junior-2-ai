@@ -1,14 +1,14 @@
-"use client";
-import { useState, useRef } from "react";
+'use client';
+import { useState, useRef } from 'react';
 
 interface Message {
-  role: "user" | "model";
+  role: 'user' | 'model';
   text: string;
   hasImage?: boolean;
 }
 
 export default function Chatbot() {
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -18,51 +18,51 @@ export default function Chatbot() {
     if (!prompt.trim()) return;
 
     const userMessage: Message = {
-      role: "user",
+      role: 'user',
       text: prompt,
       hasImage: !!selectedImage,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setLoading(true);
-    setPrompt("");
+    setPrompt('');
 
     try {
       const formData = new FormData();
-      formData.append("prompt", prompt);
-      formData.append("history", JSON.stringify(messages));
+      formData.append('prompt', prompt);
+      formData.append('history', JSON.stringify(messages));
 
       if (selectedImage) {
-        formData.append("image", selectedImage);
+        formData.append('image', selectedImage);
       }
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
+      const res = await fetch('/api/chat', {
+        method: 'POST',
         body: formData,
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData?.error || "Error del servidor");
+        throw new Error(errorData?.error || 'Error del servidor');
       }
 
       const data = await res.json();
-      const aiMessage: Message = { role: "model", text: data.response };
+      const aiMessage: Message = { role: 'model', text: data.response };
 
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       const errorMsg =
-        error instanceof Error ? error.message : "Error desconocido";
+        error instanceof Error ? error.message : 'Error desconocido';
       const errorMessage: Message = {
-        role: "model",
+        role: 'model',
         text: `Error: ${errorMsg}`,
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
       setSelectedImage(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -77,12 +77,12 @@ export default function Chatbot() {
   const removeImage = () => {
     setSelectedImage(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -97,10 +97,10 @@ export default function Chatbot() {
       <div className="h-96 overflow-y-auto border border-gray-300 p-3 mb-4 bg-gray-50 rounded">
         {messages.map((msg, i) => (
           <div key={i} className="mb-3">
-            <strong>{msg.role === "user" ? "Tú" : "IA"}:</strong>
+            <strong>{msg.role === 'user' ? 'Tú' : 'IA'}:</strong>
             <div
               className={`ml-2 p-2 rounded ${
-                msg.role === "user" ? "bg-blue-100" : "bg-green-100"
+                msg.role === 'user' ? 'bg-blue-100' : 'bg-green-100'
               }`}
             >
               {msg.text}
@@ -128,7 +128,7 @@ export default function Chatbot() {
         <div className="flex gap-2 items-end">
           <textarea
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={e => setPrompt(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Escribe tu mensaje aquí..."
             className="flex-1 min-h-[60px] p-2 border border-gray-300 rounded"
@@ -157,7 +157,7 @@ export default function Chatbot() {
               disabled={loading || !prompt.trim()}
               className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? "..." : "Enviar"}
+              {loading ? '...' : 'Enviar'}
             </button>
           </div>
         </div>
