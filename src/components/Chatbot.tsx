@@ -1,5 +1,6 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { MENSAJE_BIENVENIDA } from '@/lib/prompts';
 
 interface Message {
   role: 'user' | 'model';
@@ -12,7 +13,27 @@ export default function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Mostrar mensaje de bienvenida al cargar
+  useEffect(() => {
+    if (isFirstLoad) {
+      setMessages([
+        {
+          role: 'model',
+          text: MENSAJE_BIENVENIDA,
+        },
+      ]);
+      setIsFirstLoad(false);
+    }
+  }, [isFirstLoad]);
+
+  // Auto-scroll al final del chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   const handleSend = async () => {
     if (!prompt.trim()) return;
@@ -55,7 +76,7 @@ export default function Chatbot() {
         error instanceof Error ? error.message : 'Error desconocido';
       const errorMessage: Message = {
         role: 'model',
-        text: `Error: ${errorMsg}`,
+        text: `❌ Lo siento, hubo un error: ${errorMsg}. ¿Puedes intentar de nuevo?`,
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -89,79 +110,193 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h2 className="text-xl font-bold mb-4">
-        Asistente Virtual - Torres Jr. 2
-      </h2>
-
-      <div className="h-96 overflow-y-auto border border-gray-300 p-3 mb-4 bg-gray-50 rounded">
-        {messages.map((msg, i) => (
-          <div key={i} className="mb-3">
-            <strong>{msg.role === 'user' ? 'Tú' : 'IA'}:</strong>
-            <div
-              className={`ml-2 p-2 rounded ${
-                msg.role === 'user' ? 'bg-blue-100' : 'bg-green-100'
-              }`}
-            >
-              {msg.text}
-              {msg.hasImage && (
-                <div className="text-xs text-gray-600">[Imagen adjunta]</div>
-              )}
+    <section
+      id="chatbot"
+      className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12"
+      ref={chatEndRef}
+    >
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header del Chatbot */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-lg">🤖</span>
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">
+                Asistente Virtual
+              </h2>
+              <p className="text-amber-600 font-medium">Torres Jr. 2</p>
             </div>
           </div>
-        ))}
-        {loading && (
-          <div className="italic text-gray-600">IA está pensando...</div>
-        )}
-      </div>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Pregúntame sobre nuestros productos, tallas, colores, precios y
+            disponibilidad. ¡Estoy aquí para ayudarte a encontrar exactamente lo
+            que buscas!
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-2">
-        {selectedImage && (
-          <div className="p-2 bg-yellow-100 border border-yellow-300 rounded flex justify-between items-center">
-            <span>Imagen seleccionada: {selectedImage.name}</span>
-            <button onClick={removeImage} className="cursor-pointer">
-              ✕
-            </button>
+        {/* Chat Container */}
+        <div className="bg-white rounded-2xl shadow-xl border border-orange-100 overflow-hidden">
+          {/* Chat Messages */}
+          <div className="h-96 overflow-y-auto p-6 bg-gray-50 space-y-4">
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${
+                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                    msg.role === 'user'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                      : 'bg-white border border-amber-100 text-gray-800 shadow-sm'
+                  }`}
+                >
+                  {/* Renderizar mensaje con formato básico */}
+                  <div className="whitespace-pre-wrap">
+                    {msg.text.split('\n').map((line, index) => {
+                      if (line.trim().startsWith('•')) {
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-start gap-2 mb-1"
+                          >
+                            <span className="text-amber-500 font-bold">•</span>
+                            <span>{line.replace('•', '').trim()}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={index} className={index > 0 ? 'mt-2' : ''}>
+                          {line}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {msg.hasImage && (
+                    <div className="text-xs opacity-75 mt-2 flex items-center gap-1">
+                      <span>📷</span>
+                      <span>Imagen adjunta</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-amber-100 rounded-2xl px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"
+                        style={{ animationDelay: '0.1s' }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"
+                        style={{ animationDelay: '0.2s' }}
+                      ></div>
+                    </div>
+                    <span className="text-gray-600 text-sm">
+                      Buscando productos...
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="flex gap-2 items-end">
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Escribe tu mensaje aquí..."
-            className="flex-1 min-h-[60px] p-2 border border-gray-300 rounded"
-            disabled={loading}
-          />
+          {/* Input Area */}
+          <div className="p-6 bg-white border-t border-amber-100">
+            {selectedImage && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-600">📷</span>
+                  <span className="text-sm text-gray-700">
+                    Imagen: {selectedImage.name}
+                  </span>
+                </div>
+                <button
+                  onClick={removeImage}
+                  className="text-red-500 hover:text-red-700 font-bold text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
-          <div className="flex flex-col gap-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <textarea
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Escribe tu consulta aquí... ej: '¿Tienen overoles para bebé?' o '¿Qué bolsos tienen disponibles?'"
+                  className="w-full min-h-[60px] max-h-32 p-3 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none transition-colors"
+                  disabled={loading}
+                />
+              </div>
 
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-              className="px-3 py-2 bg-gray-200 border border-gray-300 rounded cursor-pointer disabled:cursor-not-allowed"
-            >
-              📷 Imagen
-            </button>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
 
-            <button
-              onClick={handleSend}
-              disabled={loading || !prompt.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {loading ? '...' : 'Enviar'}
-            </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-gray-300"
+                  title="Subir imagen"
+                >
+                  📷
+                </button>
+
+                <button
+                  onClick={handleSend}
+                  disabled={loading || !prompt.trim()}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md"
+                >
+                  {loading ? '...' : 'Enviar'}
+                </button>
+              </div>
+            </div>
+
+            {/* Sugerencias rápidas */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                '¿Tienen ropa para bebé?',
+                'Bolsos disponibles',
+                '¿Cuál es su horario?',
+              ].map((suggestion, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPrompt(suggestion)}
+                  disabled={loading}
+                  className="px-3 py-1 text-sm bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 disabled:opacity-50 transition-colors"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Info adicional */}
+        <div className="text-center mt-6 text-sm text-gray-600">
+          <p>
+            💡 <strong>Tip:</strong> Puedes preguntar por productos específicos,
+            tallas, colores, precios y stock disponible
+          </p>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
