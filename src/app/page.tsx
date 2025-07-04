@@ -1,11 +1,12 @@
 import Chatbot from '@/components/Chatbot';
+import Image from 'next/image';
 
 export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Header */}
       <header className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-sm z-50 border-b border-orange-100">
-        <nav className="max-w-6xl mx-auto px-6 py-4">
+        <nav className="max-w-6xl mx-auto px-6 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
@@ -88,10 +89,15 @@ export default function Home() {
             </div>
 
             <div className="relative">
-              <div className="relative w-full h-96 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl overflow-hidden shadow-xl">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-6xl">👗👶👔</div>
-                </div>
+              <div className="relative w-full h-96 rounded-2xl overflow-hidden shadow-xl">
+                <Image
+                  src="/landing/hero-section.jpeg"
+                  alt="Torres Jr. 2 - Ropa para toda la familia"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>
             </div>
           </div>
@@ -99,7 +105,7 @@ export default function Home() {
       </section>
 
       {/* Productos Section */}
-      <section id="productos" className="py-10 bg-white">
+      <section id="productos" className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
@@ -115,54 +121,67 @@ export default function Home() {
             {[
               {
                 titulo: 'Ropa de Bebé',
-                emoji: '👶',
+                imagen: '/landing/ropa-de-bebe.jpeg',
                 descripcion: 'Ajuares, overoles, bodys',
               },
               {
                 titulo: 'Ropa de Niño',
-                emoji: '👦',
+                imagen: '/landing/ropa-de-niño.jpeg',
                 descripcion: 'Polos, pantalones, conjuntos',
               },
               {
                 titulo: 'Ropa de Niña',
-                emoji: '👧',
+                imagen: '/landing/ropa-de-niña.jpeg',
                 descripcion: 'Vestidos, blusas, faldas',
               },
               {
                 titulo: 'Ropa de Mujer',
-                emoji: '👩',
+                imagen: '/landing/ropa-de-mujer.jpeg',
                 descripcion: 'Blusas, pantalones, vestidos',
               },
               {
-                titulo: 'Accesorios',
-                emoji: '👜',
+                titulo: 'Pañaleras y Mochilas',
+                imagen: '/landing/panaleras-y-mochilas.jpeg',
                 descripcion: 'Bolsos, mochilas, carteras',
               },
               {
                 titulo: 'Maternidad',
-                emoji: '🤱',
+                imagen: '/landing/maternidad.jpeg',
                 descripcion: 'Ropa de lactancia y maternidad',
               },
               {
                 titulo: 'Calzado Infantil',
-                emoji: '👟',
+                imagen: '/landing/calzado-niños.jpeg',
                 descripcion: 'Zapatos para bebés y niños',
               },
               {
-                titulo: 'Medias',
-                emoji: '🧦',
-                descripcion: 'Algodón y perlón para niños',
+                titulo: 'Toallas',
+                imagen: '/landing/toallas.jpeg',
+                descripcion: 'Toallas suaves para bebés',
               },
             ].map((categoria, i) => (
               <div key={i} className="group">
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl text-center hover:shadow-lg transition-all duration-200 border border-orange-100 group-hover:border-amber-300">
-                  <div className="text-4xl mb-4">{categoria.emoji}</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {categoria.titulo}
-                  </h3>
-                  <p className="text-gray-600 text-sm">
-                    {categoria.descripcion}
-                  </p>
+                <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-orange-100 group-hover:border-amber-300">
+                  {/* Imagen */}
+                  <div className="relative h-48 overflow-hidden">
+                    <Image
+                      src={categoria.imagen}
+                      alt={categoria.titulo}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                  </div>
+
+                  {/* Contenido */}
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {categoria.titulo}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {categoria.descripcion}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -183,7 +202,7 @@ export default function Home() {
       <Chatbot />
 
       {/* Contacto Section */}
-      <section id="contacto" className="py-20 bg-gray-50">
+      <section id="contacto" className="py-20 pb-10 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
@@ -274,7 +293,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8">
+      <footer className="bg-gray-900 text-white py-6">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
