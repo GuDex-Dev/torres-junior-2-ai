@@ -1,9 +1,8 @@
 // lib/gemini-inteligente.ts
 import { GoogleGenAI } from '@google/genai';
-import { obtenerProductos } from './productos';
+import { obtenerProductos, obtenerProductoPorId } from './productos';
 import { buscarProductos } from './busqueda-productos';
 import { Producto } from '@/types/producto';
-import { TORRES_SYSTEM_PROMPT } from './prompts';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
@@ -11,12 +10,17 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 let categoriasCache: { [key: string]: string[] } | null = null;
 let ultimaActualizacionCache = 0;
 
-// Interfaz para respuestas de IA
+// Interfaces para respuestas de IA
 interface ClasificacionCategoria {
-  categoria: string;
-  subcategoria?: string;
-  categorias_principales?: string[];
-  terminos_busqueda?: string[];
+  categorias: string[];
+  subcategorias?: string[];
+}
+
+interface AnalisisConsulta {
+  esConsultaProducto: boolean;
+  esConsultaSeguimiento: boolean;
+  productosAnteriores?: string[];
+  clasificacion?: ClasificacionCategoria;
 }
 
 interface ProductosSeleccionados {
@@ -30,7 +34,7 @@ interface ValidacionEspecificaciones {
 
 /**
  * SISTEMA DE BÚSQUEDA INTELIGENTE CON IA
- * Búsqueda en 4 pasos para máxima precisión
+ * Análisis contextual completo en 6 pasos
  */
 export async function chatWithGeminiInteligente(
   messages: { role: 'user' | 'model'; text: string }[],
@@ -42,48 +46,76 @@ export async function chatWithGeminiInteligente(
 
     console.log('🚀 INICIANDO BÚSQUEDA INTELIGENTE:', consulta);
 
-    // Verificar si es consulta de producto
-    if (!esConsultaDeProducto(consulta)) {
-      console.log('ℹ️ No es consulta de producto - usando respuesta general');
-      return await respuestaGeneral(consulta, messages, imageFile);
-    }
-
-    // PASO 1: Obtener categorías dinámicamente de Firebase
+    // PASO 1: Obtener categorías
     console.log('📂 PASO 1: Obteniendo categorías de Firebase...');
     const categorias = await obtenerCategoriasDinamicas();
 
-    // PASO 2: Clasificar consulta por categoría
-    console.log('🎯 PASO 2: Clasificando categoría con IA...');
-    const clasificacion = await clasificarCategoria(consulta, categorias);
+    // PASO 2: Análisis inteligente con contexto
+    console.log('🧠 PASO 2: Analizando consulta con contexto...');
+    const analisis = await analizarConsultaConContexto(
+      consulta,
+      messages,
+      categorias
+    );
 
-    if (!clasificacion.categoria) {
+    // Si no es consulta de producto según Gemini
+    if (!analisis.esConsultaProducto) {
+      console.log('ℹ️ Gemini determinó que no es consulta de producto');
+      return await respuestaGeneral(consulta, messages, imageFile);
+    }
+
+    // Si es consulta de seguimiento
+    if (analisis.esConsultaSeguimiento && analisis.productosAnteriores) {
+      console.log('🔄 Manejando consulta de seguimiento');
+      return await manejarConsultaSeguimiento(
+        consulta,
+        analisis.productosAnteriores
+      );
+    }
+
+    // Si no hay clasificación, error
+    if (!analisis.clasificacion?.categorias?.length) {
       return 'No pude identificar qué tipo de producto buscas. ¿Podrías ser más específico?';
     }
 
-    console.log('✅ Categoría detectada:', clasificacion);
+    console.log('✅ Clasificación:', analisis.clasificacion);
 
-    // PASO 3: Obtener productos de la categoría
-    console.log('📦 PASO 3: Obteniendo productos de la categoría...');
+    // PASO 3: Buscar productos en múltiples categorías
+    console.log('📦 PASO 3: Buscando productos...');
+    let productosCategoria: Producto[] = [];
 
-    // Primero buscar por categoría principal
-    let productosCategoria = await buscarProductos({
-      categoria: clasificacion.categoria,
-      limite: 50,
-      activo: true,
-    });
-
-    // Si hay pocos resultados, buscar también sin subcategoría específica
-    if (productosCategoria.length < 3 && clasificacion.subcategoria) {
-      console.log('📦 Ampliando búsqueda a toda la categoría...');
-      productosCategoria = await buscarProductos({
-        categoria: clasificacion.categoria,
-        limite: 50,
+    // Buscar en categorías
+    for (const categoria of analisis.clasificacion.categorias) {
+      console.log(`📂 Buscando en categoría: ${categoria}`);
+      const productos = await buscarProductos({
+        categoria: categoria,
+        limite: 30,
         activo: true,
       });
+      productosCategoria = [...productosCategoria, ...productos];
     }
 
-    // Si aún hay pocos, buscar por texto también
-    if (productosCategoria.length < 3) {
+    // Buscar en subcategorías
+    if (analisis.clasificacion.subcategorias?.length) {
+      for (const subcategoria of analisis.clasificacion.subcategorias) {
+        console.log(`📂 Buscando en subcategoría: ${subcategoria}`);
+        const productos = await buscarProductos({
+          subcategoria: subcategoria,
+          limite: 20,
+          activo: true,
+        });
+        productosCategoria = [...productosCategoria, ...productos];
+      }
+    }
+
+    // Eliminar duplicados
+    const productosUnicos = productosCategoria.filter(
+      (producto, index, array) =>
+        array.findIndex(p => p.id === producto.id) === index
+    );
+
+    // Búsqueda adicional por texto si pocos resultados
+    if (productosUnicos.length < 5) {
       console.log('📦 Búsqueda adicional por texto...');
       const productosTexto = await buscarProductos({
         texto: consulta,
@@ -91,24 +123,23 @@ export async function chatWithGeminiInteligente(
         activo: true,
       });
 
-      // Combinar resultados eliminando duplicados
-      const idsExistentes = new Set(productosCategoria.map(p => p.id));
+      const idsExistentes = new Set(productosUnicos.map(p => p.id));
       const productosNuevos = productosTexto.filter(
         p => !idsExistentes.has(p.id)
       );
-      productosCategoria = [...productosCategoria, ...productosNuevos];
+      productosCategoria = [...productosUnicos, ...productosNuevos];
+    } else {
+      productosCategoria = productosUnicos;
     }
 
     if (productosCategoria.length === 0) {
       return await sugerirCategoriasAlternativas(consulta, categorias);
     }
 
-    console.log(
-      `📊 Productos encontrados en categoría: ${productosCategoria.length}`
-    );
+    console.log(`📊 Productos encontrados: ${productosCategoria.length}`);
 
-    // PASO 4: Filtrar productos relevantes con IA
-    console.log('🔍 PASO 4: Filtrando productos relevantes con IA...');
+    // PASO 4: Filtrar productos relevantes
+    console.log('🔍 PASO 4: Filtrando productos relevantes...');
     const productosFiltrados = await filtrarProductosPorIA(
       productosCategoria,
       consulta
@@ -118,10 +149,8 @@ export async function chatWithGeminiInteligente(
       return await sugerirProductosSimilares(consulta, productosCategoria);
     }
 
-    console.log(`🎯 Productos filtrados: ${productosFiltrados.length}`);
-
-    // PASO 5: Validar especificaciones específicas
-    console.log('✅ PASO 5: Validando especificaciones específicas...');
+    // PASO 5: Validar especificaciones
+    console.log('✅ PASO 5: Validando especificaciones...');
     const validacion = await validarEspecificaciones(
       productosFiltrados,
       consulta
@@ -132,7 +161,6 @@ export async function chatWithGeminiInteligente(
     );
 
     if (productosFinales.length === 0) {
-      // Mostrar productos similares
       return await generarRespuestaFinal(
         productosFiltrados.slice(0, 3),
         true,
@@ -216,56 +244,151 @@ async function obtenerCategoriasDinamicas(): Promise<{
 }
 
 /**
- * PASO 2: Clasificar consulta por categoría usando IA
+ * PASO 2: Análisis inteligente con contexto
  */
-async function clasificarCategoria(
+async function analizarConsultaConContexto(
   consulta: string,
+  mensajes: { role: 'user' | 'model'; text: string }[],
   categorias: { [key: string]: string[] }
-): Promise<ClasificacionCategoria> {
-  try {
-    const prompt = `Analiza esta consulta de cliente y determina la categoría y subcategoría más apropiada.
+): Promise<AnalisisConsulta> {
+  // Obtener contexto de mensajes anteriores
+  const contextoPrevio = mensajes
+    .slice(-4)
+    .map(msg => `${msg.role}: ${msg.text}`)
+    .join('\n');
+  const hayProductosAnteriores = mensajes.some(msg =>
+    msg.text.includes('[PRODUCTOS:')
+  );
 
-CONSULTA DEL CLIENTE: "${consulta}"
+  const prompt = `Analiza esta consulta considerando el contexto de la conversación.
 
-CATEGORÍAS Y SUBCATEGORÍAS DISPONIBLES:
+CONSULTA ACTUAL: "${consulta}"
+
+CONTEXTO PREVIO:
+${contextoPrevio}
+
+CATEGORÍAS DISPONIBLES:
 ${Object.entries(categorias)
   .map(([cat, subs]) => `- ${cat}: [${subs.join(', ')}]`)
   .join('\n')}
 
 INSTRUCCIONES:
-- Responde SOLO con JSON válido
-- Si no estás 100% seguro, elige la más probable
-- Si es muy general, no incluyas subcategoría
+1. Determina si es consulta sobre productos de la tienda
+2. Si hay productos mencionados antes, detecta si es consulta de seguimiento
+3. Si es consulta de producto, clasifica categorías relevantes múltiples
 
-FORMATO DE RESPUESTA:
-{"categoria": "nombre_exacto_categoria", "subcategoria": "nombre_exacto_subcategoria"}
+RESPONDE CON JSON:
+{
+  "esConsultaProducto": true/false,
+  "esConsultaSeguimiento": true/false,
+  "clasificacion": {
+    "categorias": ["categoria1", "categoria2"],
+    "subcategorias": ["sub1", "sub2"]
+  }
+}
 
 EJEMPLOS:
-- "mochilas" → {"categoria": "Bolsos y Mochilas", "subcategoria": "Mochilas"}
-- "ropa de bebé" → {"categoria": "Conjuntos", "subcategoria": "Bodies para bebé"}
-- "polos" → {"categoria": "Prendas superiores", "subcategoria": "Polos infantiles"}`;
+- "¿Cuál es su horario?" → {"esConsultaProducto": false}
+- "Tienen mochilas?" → {"esConsultaProducto": true, "clasificacion": {"categorias": ["Bolsos y Mochilas"], "subcategorias": ["Mochilas"]}}
+- "Tiene en rojo?" (después de mostrar productos) → {"esConsultaProducto": true, "esConsultaSeguimiento": true}
+- "ropa para bebé" → {"esConsultaProducto": true, "clasificacion": {"categorias": ["Conjuntos", "Toallas", "Cargadores"], "subcategorias": ["Bodies para bebé", "Conjunto de bebé"]}}`;
+
+  try {
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ text: prompt }],
+      config: { temperature: 0.1, topP: 0.8, topK: 10 },
+    });
+
+    const respuesta = result.text || '{"esConsultaProducto": false}';
+    console.log('🧠 Análisis IA:', respuesta);
+
+    const jsonLimpio = limpiarRespuestaJSON(respuesta);
+    const analisis = JSON.parse(jsonLimpio);
+
+    // Extraer IDs de productos anteriores si es seguimiento
+    if (analisis.esConsultaSeguimiento && hayProductosAnteriores) {
+      const mensajesReversed = [...mensajes].reverse();
+      const ultimoMensajeConProductos = mensajesReversed.find(msg =>
+        msg.text.includes('[PRODUCTOS:')
+      );
+      if (ultimoMensajeConProductos) {
+        const match = ultimoMensajeConProductos.text.match(
+          /\[PRODUCTOS:([\w,]+)\]/
+        );
+        analisis.productosAnteriores = match ? match[1].split(',') : [];
+      }
+    }
+
+    return analisis;
+  } catch (error) {
+    console.error('❌ Error analizando consulta:', error);
+    return { esConsultaProducto: true, esConsultaSeguimiento: false };
+  }
+}
+
+/**
+ * Manejar consultas de seguimiento sobre productos anteriores
+ */
+async function manejarConsultaSeguimiento(
+  consulta: string,
+  productIds: string[]
+): Promise<string> {
+  try {
+    console.log('🔄 Obteniendo productos anteriores:', productIds);
+
+    // Obtener productos anteriores
+    const productos = [];
+    for (const id of productIds) {
+      try {
+        const producto = await obtenerProductoPorId(id.trim());
+        if (producto) productos.push(producto);
+      } catch (error) {
+        console.error('Error obteniendo producto:', error);
+      }
+    }
+
+    if (productos.length === 0) {
+      return 'No pude encontrar los productos anteriores. ¿Podrías repetir tu consulta?';
+    }
+
+    const prompt = `El cliente pregunta sobre productos que ya vimos antes.
+
+CONSULTA DE SEGUIMIENTO: "${consulta}"
+
+PRODUCTOS ANTERIORES:
+${formatearProductosParaIA(productos)}
+
+INSTRUCCIONES:
+- Responde específicamente sobre ESTOS productos
+- Si pregunta por colores, menciona los colores disponibles de estos productos
+- Si pregunta por tallas, menciona las tallas con stock
+- Si pregunta por precios, usa los precios exactos
+- Respuesta corta y directa (máximo 30 palabras)
+- OBLIGATORIO: Incluye [PRODUCTOS:${productIds.join(',')}] al final
+
+FORMATO: "Respuesta específica sobre los productos anteriores. [PRODUCTOS:ids]"`;
 
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [{ text: prompt }],
-      config: {
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 10,
-      },
+      config: { temperature: 0.1, topP: 0.8, topK: 10 },
     });
 
-    const respuesta = result.text || '{}';
-    console.log('🎯 Clasificación IA:', respuesta);
+    const respuesta =
+      result.text || `Sobre los productos anteriores: ${consulta}`;
 
-    // Limpiar markdown y extraer JSON puro
-    const jsonLimpio = limpiarRespuestaJSON(respuesta);
-    console.log('🔧 JSON limpio:', jsonLimpio);
+    if (!respuesta.includes('[PRODUCTOS:')) {
+      return `${respuesta} [PRODUCTOS:${productIds.join(',')}]`;
+    }
 
-    return JSON.parse(jsonLimpio) as ClasificacionCategoria;
+    console.log('✅ Respuesta de seguimiento:', respuesta);
+    return respuesta;
   } catch (error) {
-    console.error('❌ Error clasificando categoría:', error);
-    return { categoria: '' };
+    console.error('❌ Error en consulta de seguimiento:', error);
+    return `No pude procesar tu consulta sobre los productos anteriores. [PRODUCTOS:${productIds.join(
+      ','
+    )}]`;
   }
 }
 
@@ -278,7 +401,7 @@ async function filtrarProductosPorIA(
 ): Promise<Producto[]> {
   try {
     // Si hay pocos productos, devolver todos
-    if (productos.length <= 4) {
+    if (productos.length <= 6) {
       console.log('🔍 Pocos productos, devolviendo todos:', productos.length);
       return productos;
     }
@@ -286,7 +409,7 @@ async function filtrarProductosPorIA(
     const productosResumidos = productos.map(p => ({
       id: p.id,
       nombre: p.nombre,
-      descripcion: p.descripcion.substring(0, 150) + '...',
+      descripcion: p.descripcion.substring(0, 200) + '...',
       categoria: p.categoria,
       subcategoria: p.subcategoria,
       stock_total: calcularStockTotal(p),
@@ -295,7 +418,7 @@ async function filtrarProductosPorIA(
       ),
     }));
 
-    const prompt = `Analiza la consulta del cliente y selecciona los productos MÁS RELEVANTES.
+    const prompt = `Analiza la consulta del cliente y selecciona los productos MÁS RELEVANTES basándote tanto en el NOMBRE como en la DESCRIPCIÓN.
 
 CONSULTA: "${consulta}"
 
@@ -303,29 +426,32 @@ PRODUCTOS DISPONIBLES:
 ${productosResumidos
   .map(
     (p, i) =>
-      `${i + 1}. ID: ${p.id} | ${p.nombre} | ${p.descripcion} | Stock: ${
-        p.stock_total
-      } | Desde S/ ${p.precio_min}`
+      `${i + 1}. ID: ${p.id}
+NOMBRE: ${p.nombre}
+DESCRIPCIÓN: ${p.descripcion}
+CATEGORÍA: ${p.categoria} - ${p.subcategoria}
+STOCK: ${p.stock_total} | PRECIO: S/ ${p.precio_min}+`
   )
-  .join('\n')}
+  .join('\n\n')}
 
-INSTRUCCIONES:
-- Para consultas como "mochilas", selecciona TODAS las mochilas disponibles
-- Máximo 6 productos más relevantes
+INSTRUCCIONES DE ANÁLISIS:
+- Analiza tanto el NOMBRE como la DESCRIPCIÓN de cada producto
+- Busca coincidencias de palabras clave en ambos campos
+- Considera sinónimos y términos relacionados
+- Prioriza productos con mayor relevancia semántica
+- Si la consulta es "ropa para bebé", busca en nombres Y descripciones que mencionen "bebé", "recién nacido", etc.
+- Si es "mochilas", busca tanto productos con "mochila" en el nombre como en la descripción
+- Máximo 8 productos más relevantes
 - Prioriza productos con stock disponible
 - Responde SOLO con JSON válido
 
 FORMATO:
-{"productos_seleccionados": ["id1", "id2", "id3", "id4"]}`;
+{"productos_seleccionados": ["id1", "id2", "id3", "id4", "id5", "id6"]}`;
 
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [{ text: prompt }],
-      config: {
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 10,
-      },
+      config: { temperature: 0.1, topP: 0.8, topK: 10 },
     });
 
     const respuesta = result.text || '{"productos_seleccionados": []}';
@@ -338,16 +464,18 @@ FORMATO:
       resultado.productos_seleccionados.includes(p.id!)
     );
 
-    // Si la IA no seleccionó productos o muy pocos, devolver los primeros
+    // Si la IA no seleccionó productos o muy pocos, devolver los primeros con mejor stock
     if (productosFiltrados.length === 0) {
-      console.log('🔍 IA no seleccionó productos, usando primeros 4');
-      return productos.slice(0, 4);
+      console.log('🔍 IA no seleccionó productos, usando criterio de stock');
+      return productos
+        .sort((a, b) => calcularStockTotal(b) - calcularStockTotal(a))
+        .slice(0, 6);
     }
 
     return productosFiltrados;
   } catch (error) {
     console.error('❌ Error filtrando productos:', error);
-    return productos.slice(0, 4); // Fallback a primeros 4
+    return productos.slice(0, 6); // Fallback a primeros 6
   }
 }
 
@@ -400,7 +528,7 @@ INSTRUCCIONES:
 - Si la consulta especifica color/talla/precio, filtra productos que cumplan
 - Si NO especifica detalles, devuelve todos los productos
 - Si NO hay coincidencias exactas, marca como "similares"
-- Máximo 4 productos finales
+- Máximo 6 productos finales
 
 FORMATO:
 {"productos_finales": ["id1", "id2"], "son_similares": false}`;
@@ -408,11 +536,7 @@ FORMATO:
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [{ text: prompt }],
-      config: {
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 10,
-      },
+      config: { temperature: 0.1, topP: 0.8, topK: 10 },
     });
 
     const respuesta =
@@ -442,7 +566,6 @@ async function generarRespuestaFinal(
     const productosFormateados = formatearProductosParaIA(productos);
     const productIds = productos.map(p => p.id).join(',');
 
-    // System prompt sin instrucciones de saludo
     const promptSinSaludo = `
 Eres el asistente virtual de Torres Jr. 2, tienda de ropa infantil en Sullana, Piura.
 
@@ -491,11 +614,7 @@ ${
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: [{ text: prompt }],
-      config: {
-        temperature: 0.1,
-        topP: 0.8,
-        topK: 10,
-      },
+      config: { temperature: 0.1, topP: 0.8, topK: 10 },
     });
 
     const respuesta =
@@ -533,7 +652,6 @@ async function respuestaGeneral(
   imageFile?: File
 ): Promise<string> {
   try {
-    // System prompt sin saludo de bienvenida
     const promptGeneral = `
 Eres el asistente virtual de Torres Jr. 2, tienda de ropa infantil en Sullana, Piura.
 
@@ -660,37 +778,9 @@ function limpiarRespuestaJSON(respuesta: string): string {
   return jsonLimpio;
 }
 
-function esConsultaDeProducto(texto: string): boolean {
-  const palabrasProducto = [
-    'busco',
-    'necesito',
-    'quiero',
-    'tienen',
-    'hay',
-    'venden',
-    'stock',
-    'ropa',
-    'polo',
-    'pantalón',
-    'vestido',
-    'blusa',
-    'conjunto',
-    'body',
-    'bolso',
-    'mochila',
-    'cartera',
-    'bebé',
-    'niño',
-    'niña',
-    'talla',
-    'color',
-    'precio',
-  ];
-
-  const textoLower = texto.toLowerCase();
-  return palabrasProducto.some(palabra => textoLower.includes(palabra));
-}
-
+/**
+ * Calcular stock total de un producto
+ */
 function calcularStockTotal(producto: Producto): number {
   return producto.variaciones.reduce(
     (total, variacion) =>
@@ -699,6 +789,9 @@ function calcularStockTotal(producto: Producto): number {
   );
 }
 
+/**
+ * Formatear productos para enviar a la IA
+ */
 function formatearProductosParaIA(productos: Producto[]): string {
   return productos
     .map((producto, index) => {
@@ -742,6 +835,9 @@ IMPORTANTE: Este producto EXISTE realmente en nuestra tienda.`;
     .join('\n');
 }
 
+/**
+ * Convertir archivo a base64
+ */
 async function fileToBase64(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
