@@ -1,11 +1,16 @@
+// components/Chatbot.tsx
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { MENSAJE_BIENVENIDA } from '@/lib/prompts';
+import { obtenerProductoPorId } from '@/lib/productos';
+import { Producto } from '@/types/producto';
+import ProductCarousel from './ProductCarousel';
 
 interface Message {
   role: 'user' | 'model';
   text: string;
   hasImage?: boolean;
+  productos?: Producto[];
 }
 
 export default function Chatbot() {
@@ -34,6 +39,42 @@ export default function Chatbot() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Función para procesar respuesta y extraer productos
+  const procesarRespuestaConProductos = async (respuesta: string) => {
+    const marcadorRegex = /\[PRODUCTOS:([\w,]+)\]/;
+    const match = respuesta.match(marcadorRegex);
+
+    if (match) {
+      const productIds = match[1].split(',');
+      const productos: Producto[] = [];
+
+      // Obtener productos por ID
+      for (const id of productIds) {
+        try {
+          const producto = await obtenerProductoPorId(id.trim());
+          if (producto) {
+            productos.push(producto);
+          }
+        } catch (error) {
+          console.error('Error obteniendo producto:', id, error);
+        }
+      }
+
+      // Limpiar marcador del texto
+      const textoLimpio = respuesta.replace(marcadorRegex, '').trim();
+
+      return {
+        text: textoLimpio,
+        productos: productos,
+      };
+    }
+
+    return {
+      text: respuesta,
+      productos: [],
+    };
+  };
 
   const handleSend = async () => {
     if (!prompt.trim()) return;
@@ -68,7 +109,17 @@ export default function Chatbot() {
       }
 
       const data = await res.json();
-      const aiMessage: Message = { role: 'model', text: data.response };
+
+      // Procesar respuesta para extraer productos
+      const { text, productos } = await procesarRespuestaConProductos(
+        data.response
+      );
+
+      const aiMessage: Message = {
+        role: 'model',
+        text,
+        productos,
+      };
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
@@ -175,6 +226,11 @@ export default function Chatbot() {
                       );
                     })}
                   </div>
+
+                  {/* Carrusel de productos si existen */}
+                  {msg.productos && msg.productos.length > 0 && (
+                    <ProductCarousel productos={msg.productos} />
+                  )}
 
                   {msg.hasImage && (
                     <div className="text-xs opacity-75 mt-2 flex items-center gap-1">

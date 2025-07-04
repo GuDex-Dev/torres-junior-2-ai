@@ -242,6 +242,9 @@ function formatearProductosParaIA(productos: any[]): string {
     return '';
   }
 
+  // Crear lista de IDs para marcadores
+  const productIds = productos.map(p => p.id).join(',');
+
   return (
     productos
       .map((producto, index) => {
@@ -295,6 +298,12 @@ IMPORTANTE: Este producto EXISTE realmente en nuestra tienda.
     `
 
 TOTAL DE PRODUCTOS REALES ENCONTRADOS: ${productos.length}
+
+🚨 INSTRUCCIONES CRÍTICAS PARA MOSTRAR PRODUCTOS:
+1. Cuando menciones productos, DEBES incluir el marcador [PRODUCTOS:${productIds}] al final de tu respuesta
+2. Este marcador permitirá mostrar cards visuales de los productos
+3. Ejemplo de respuesta correcta: "Tenemos estos bolsos disponibles: Bolso Berlón Osito y Bolso Perlita. [PRODUCTOS:${productIds}]"
+4. SIEMPRE incluye el marcador cuando hables de productos específicos
 
 ADVERTENCIA CRÍTICA: SOLO menciona estos ${productos.length} productos. NO agregues otros productos que no aparezcan en esta lista.`
   );

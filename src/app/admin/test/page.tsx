@@ -18,6 +18,28 @@ export default function TestPage() {
       console.log(data);
       setProductos(data);
       setMensaje(`✅ Éxito: ${data.length} productos obtenidos`);
+
+      // 🔍 GENERAR ESTRUCTURA DE CATEGORÍAS Y SUBCATEGORÍAS
+      const categoriasMap = new Map<string, Set<string>>();
+
+      data.forEach(producto => {
+        if (!categoriasMap.has(producto.categoria)) {
+          categoriasMap.set(producto.categoria, new Set());
+        }
+        categoriasMap.get(producto.categoria)?.add(producto.subcategoria);
+      });
+
+      // Convertir a formato solicitado
+      const estructuraCategorias = Array.from(categoriasMap.entries()).map(
+        ([categoria, subcategoriasSet]) => ({
+          categoria: categoria,
+          subcategorias: Array.from(subcategoriasSet).sort(),
+        })
+      );
+
+      // 📋 CONSOLE LOG SOLICITADO
+      console.log('📊 ESTRUCTURA DE CATEGORÍAS Y SUBCATEGORÍAS:');
+      console.log(estructuraCategorias);
     } catch (error) {
       setMensaje(`❌ Error: ${error}`);
     }
@@ -91,6 +113,42 @@ export default function TestPage() {
         </div>
       )}
 
+      {/* 📊 MOSTRAR ESTRUCTURA EN UI TAMBIÉN */}
+      {productos.length > 0 && (
+        <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <h3 className="font-semibold text-amber-800 mb-2">
+            📊 Estructura de Categorías (ver consola para formato exacto)
+          </h3>
+          {(() => {
+            const categoriasMap = new Map<string, Set<string>>();
+
+            productos.forEach(producto => {
+              if (!categoriasMap.has(producto.categoria)) {
+                categoriasMap.set(producto.categoria, new Set());
+              }
+              categoriasMap.get(producto.categoria)?.add(producto.subcategoria);
+            });
+
+            return Array.from(categoriasMap.entries()).map(
+              ([categoria, subcategoriasSet]) => (
+                <div key={categoria} className="mb-2">
+                  <span className="font-medium text-amber-700">
+                    {categoria}:
+                  </span>
+                  <span className="ml-2 text-amber-600">
+                    [
+                    {Array.from(subcategoriasSet)
+                      .map(sub => `"${sub}"`)
+                      .join(', ')}
+                    ]
+                  </span>
+                </div>
+              )
+            );
+          })()}
+        </div>
+      )}
+
       <div>
         <h2 className="text-xl font-semibold mb-4">
           Productos ({productos.length})
@@ -101,6 +159,10 @@ export default function TestPage() {
               <h3 className="font-medium">{producto.nombre}</h3>
               <p className="text-sm text-gray-600">{producto.descripcion}</p>
               <p className="text-xs text-gray-500">ID: {producto.id}</p>
+              <p className="text-xs text-gray-500">
+                Categoría: {producto.categoria} | Subcategoría:{' '}
+                {producto.subcategoria}
+              </p>
               <p className="text-xs text-gray-500">
                 Variaciones: {producto.variaciones.length}
               </p>

@@ -16,10 +16,16 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
+  const [subcategoriaFiltro, setSubcategoriaFiltro] = useState('');
 
   useEffect(() => {
     cargarProductos();
   }, []);
+
+  // Reset subcategoría cuando cambia categoría
+  useEffect(() => {
+    setSubcategoriaFiltro('');
+  }, [categoriaFiltro]);
 
   const cargarProductos = async () => {
     try {
@@ -37,10 +43,23 @@ export default function AdminDashboard() {
       .includes(filtro.toLowerCase());
     const matchCategoria =
       categoriaFiltro === '' || producto.categoria === categoriaFiltro;
-    return matchNombre && matchCategoria;
+    const matchSubcategoria =
+      subcategoriaFiltro === '' || producto.subcategoria === subcategoriaFiltro;
+    return matchNombre && matchCategoria && matchSubcategoria;
   });
 
   const categorias = [...new Set(productos.map(p => p.categoria))];
+
+  // Subcategorías filtradas por categoría seleccionada
+  const subcategorias = categoriaFiltro
+    ? [
+        ...new Set(
+          productos
+            .filter(p => p.categoria === categoriaFiltro)
+            .map(p => p.subcategoria)
+        ),
+      ]
+    : [...new Set(productos.map(p => p.subcategoria))];
 
   const getTotalStock = (producto: Producto) => {
     return producto.variaciones.reduce(
@@ -147,8 +166,9 @@ export default function AdminDashboard() {
 
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-orange-100">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Búsqueda por nombre */}
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Buscar por nombre
             </label>
@@ -161,9 +181,10 @@ export default function AdminDashboard() {
             />
           </div>
 
-          <div className="md:w-64">
+          {/* Filtro por categoría */}
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filtrar por categoría
+              Categoría
             </label>
             <select
               value={categoriaFiltro}
@@ -178,7 +199,62 @@ export default function AdminDashboard() {
               ))}
             </select>
           </div>
+
+          {/* Filtro por subcategoría */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subcategoría
+            </label>
+            <select
+              value={subcategoriaFiltro}
+              onChange={e => setSubcategoriaFiltro(e.target.value)}
+              className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              disabled={subcategorias.length === 0}
+            >
+              <option value="">Todas las subcategorías</option>
+              {subcategorias.map(subcategoria => (
+                <option key={subcategoria} value={subcategoria}>
+                  {subcategoria}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Botón limpiar filtros */}
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setFiltro('');
+                setCategoriaFiltro('');
+                setSubcategoriaFiltro('');
+              }}
+              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors border border-gray-300 text-sm font-medium"
+            >
+              Limpiar Filtros
+            </button>
+          </div>
         </div>
+
+        {/* Información de filtros aplicados */}
+        {(filtro || categoriaFiltro || subcategoriaFiltro) && (
+          <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-sm text-amber-800">
+              <span className="font-medium">Filtros aplicados:</span>
+              {filtro && <span className="ml-2">Texto: "{filtro}"</span>}
+              {categoriaFiltro && (
+                <span className="ml-2">Categoría: "{categoriaFiltro}"</span>
+              )}
+              {subcategoriaFiltro && (
+                <span className="ml-2">
+                  Subcategoría: "{subcategoriaFiltro}"
+                </span>
+              )}
+              <span className="ml-2 font-medium">
+                → {productosFiltrados.length} productos encontrados
+              </span>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Lista de productos */}
@@ -283,12 +359,19 @@ export default function AdminDashboard() {
                       </span>
                     </div>
 
+                    {/* Mostrar subcategoría */}
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700 font-medium">
-                        {getPrecioRango(producto)}
+                      <span className="text-orange-600 font-medium">
+                        {producto.subcategoria}
                       </span>
                       <span className="text-gray-500">
                         Stock: {getTotalStock(producto)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-700 font-medium">
+                        {getPrecioRango(producto)}
                       </span>
                     </div>
                   </div>

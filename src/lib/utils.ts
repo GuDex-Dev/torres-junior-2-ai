@@ -1,3 +1,5 @@
+// lib/utils.ts
+
 export function getImageUrl(
   url: string | undefined,
   fallbackText: string = 'Producto'
@@ -5,7 +7,6 @@ export function getImageUrl(
   if (!url || url === '/productos/test-image.jpg') {
     return getPlaceholderSvg(fallbackText);
   }
-
   return url;
 }
 
@@ -31,4 +32,27 @@ export function handleImageError(
 
 export function isLocalProductImage(url: string | undefined): boolean {
   return url?.startsWith('/productos/') || false;
+}
+
+// Función adicional para el sistema de productos
+export function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+    .trim();
+}
+
+// Función para validar URLs de imágenes
+export function isValidImageUrl(url: string): boolean {
+  if (!url) return false;
+
+  const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+  const lowercaseUrl = url.toLowerCase();
+
+  return (
+    validExtensions.some(ext => lowercaseUrl.includes(ext)) ||
+    url.startsWith('data:image/') ||
+    url.startsWith('/productos/')
+  );
 }

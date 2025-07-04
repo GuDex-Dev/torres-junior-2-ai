@@ -1,5 +1,6 @@
+// src/app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { chatWithGemini } from '@/lib/gemini';
+import { chatWithGeminiInteligente } from '@/lib/gemini-inteligente'; // ✅ CAMBIO PRINCIPAL
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,8 +29,11 @@ export async function POST(request: NextRequest) {
     // Agregar el mensaje actual al historial
     const messages = [...history, { role: 'user' as const, text: prompt }];
 
-    // Llamar a Gemini
-    const response = await chatWithGemini(messages, imageFile || undefined);
+    // ✅ USAR EL NUEVO SISTEMA INTELIGENTE
+    const response = await chatWithGeminiInteligente(
+      messages,
+      imageFile || undefined
+    );
 
     return NextResponse.json({ response });
   } catch (error) {
