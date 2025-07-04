@@ -44,9 +44,29 @@ export async function chatWithGeminiInteligente(
 ): Promise<string> {
   try {
     const lastMessage = messages[messages.length - 1];
-    const consulta = lastMessage.text;
+    let consulta = lastMessage.text;
 
     console.log('🚀 INICIANDO BÚSQUEDA INTELIGENTE:', consulta);
+
+    // Paso 0: si viene una imagen, obtener descripción
+    let imageDesc = '';
+    if (imageFile) {
+      console.log('📷 Imagen recibida, generando descripción...');
+      imageDesc = await describeImage(imageFile, consulta);
+    }
+
+    // Si hay descripción, añadirla antes de la consulta
+    if (imageDesc) {
+      consulta = `
+[IMAGEN]
+INSTRUCCIONES:
+- Dale más importancia a la consulta del usuario que a la descripción de la imagen.
+- Si hay conflicto entre imagen y consulta, prioriza la consulta.
+DESCRIPCIÓN DE LA IMAGEN: ${imageDesc}
+[/IMAGEN]
+
+${consulta}`;
+    }
 
     // PASO 1: Obtener categorías
     console.log('📂 PASO 1: Obteniendo categorías de Firebase...');
@@ -269,6 +289,7 @@ async function analizarConsultaConContexto(
   const hayProductosAnteriores = mensajes.some(msg =>
     msg.text.includes('[PRODUCTOS:')
   );
+  console.log('Consulta Actual:', consulta);
 
   const prompt = `Analiza esta consulta considerando el contexto de la conversación.
 
@@ -879,6 +900,42 @@ PRODUCTO REAL ${index + 1}:
 IMPORTANTE: Este producto EXISTE realmente en nuestra tienda.`;
     })
     .join('\n');
+}
+
+async function describeImage(
+  imageFile: File,
+  userText?: string
+): Promise<string> {
+  // Convierte el archivo en base64
+  const base64Data = await fileToBase64(imageFile);
+
+  // Construye el prompt para describir la imagen
+  const systemInstruction = `
+Eres un asistente experto en describir imágenes de forma concisa y clara.
+INSTRUCCIONES:
+- Describe todo lo que ves en la imagen: objetos, colores, contexto.
+- Mantén la descripción en un solo párrafo.
+- Sé breve y directo.
+
+- Si el usuario proporciona un texto, úsalo como contexto adicional.
+- Si no hay texto, simplemente describe la imagen.
+
+TEXTO DEL USUARIO: ${userText || 'No hay texto proporcionado.'}
+}`;
+
+  // Llamada a Gemini para obtener la descripción
+  const result = await ai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: [{ inlineData: { mimeType: imageFile.type, data: base64Data } }],
+    config: {
+      systemInstruction,
+      temperature: 0.0,
+      topP: 1.0,
+      topK: 1,
+    },
+  });
+
+  return result.text?.trim() ?? '';
 }
 
 /**
