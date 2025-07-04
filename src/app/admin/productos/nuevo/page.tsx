@@ -216,7 +216,7 @@ export default function NuevoProducto() {
                 value={form.nombre}
                 onChange={e => actualizarCampo('nombre', e.target.value)}
                 className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
-                placeholder="testProduct1"
+                placeholder="Ej: Zapatillas deportivas Nike Air Max"
                 required
               />
             </div>
@@ -230,7 +230,7 @@ export default function NuevoProducto() {
                 value={form.categoria}
                 onChange={e => actualizarCampo('categoria', e.target.value)}
                 className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
-                placeholder="categoria1"
+                placeholder="Ej: Calzado, Ropa, Accesorios"
                 required
               />
             </div>
@@ -244,7 +244,7 @@ export default function NuevoProducto() {
                 value={form.subcategoria}
                 onChange={e => actualizarCampo('subcategoria', e.target.value)}
                 className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
-                placeholder="subcategoria1"
+                placeholder="Ej: Zapatillas, Camisetas, Relojes"
                 required
               />
             </div>
@@ -271,7 +271,7 @@ export default function NuevoProducto() {
               onChange={e => actualizarCampo('descripcion', e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
-              placeholder="Descripción del producto..."
+              placeholder="Describe las características principales del producto, materiales, usos recomendados..."
               required
             />
           </div>
@@ -330,7 +330,7 @@ export default function NuevoProducto() {
                         )
                       }
                       className="flex-1 px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      placeholder="color1"
+                      placeholder="Ej: Rojo, Azul marino, Negro mate"
                     />
                     <button
                       type="button"
@@ -417,7 +417,7 @@ export default function NuevoProducto() {
                         )
                       }
                       className="px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      placeholder="12"
+                      placeholder="Ej: 42, M, XL"
                     />
                     <input
                       type="number"
@@ -431,7 +431,7 @@ export default function NuevoProducto() {
                         )
                       }
                       className="px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      placeholder="10"
+                      placeholder="Stock"
                       min="0"
                     />
                     <input
@@ -447,7 +447,7 @@ export default function NuevoProducto() {
                         )
                       }
                       className="px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      placeholder="25.50"
+                      placeholder="149.90"
                       min="0"
                     />
                     {variacion.tallas.length > 1 && (
