@@ -15,6 +15,8 @@ let ultimaActualizacionCache = 0;
 interface ClasificacionCategoria {
   categoria: string;
   subcategoria?: string;
+  categorias_principales?: string[];
+  terminos_busqueda?: string[];
 }
 
 interface ProductosSeleccionados {

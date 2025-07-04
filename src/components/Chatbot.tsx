@@ -171,7 +171,7 @@ export default function Chatbot() {
   return (
     <section
       id="chatbot"
-      className="max-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-2 pt-20"
+      className=" bg-gradient-to-br from-amber-50 to-orange-50 py-20"
       ref={chatEndRef}
     >
       <div className="max-w-9/12 mx-auto p-2">
