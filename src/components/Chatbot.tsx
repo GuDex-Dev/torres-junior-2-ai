@@ -9,6 +9,8 @@ interface Message {
   role: 'user' | 'model';
   text: string;
   hasImage?: boolean;
+  imageUrl?: string; // NUEVO: URL base64 de la imagen
+  imageFile?: File; // NUEVO: Archivo original
   productos?: Producto[];
 }
 
@@ -18,6 +20,7 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +36,21 @@ export default function Chatbot() {
       setIsFirstLoad(false);
     }
   }, [isFirstLoad]);
+
+  // Auto-scroll al final del chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  // Función para convertir File a base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   // Función para procesar respuesta y extraer productos
   const procesarRespuestaConProductos = async (respuesta: string) => {
@@ -73,10 +91,22 @@ export default function Chatbot() {
   const handleSend = async () => {
     if (!prompt.trim()) return;
 
+    // Convertir imagen a base64 si existe
+    let imageUrl = '';
+    if (selectedImage) {
+      try {
+        imageUrl = await fileToBase64(selectedImage);
+      } catch (error) {
+        console.error('Error convirtiendo imagen:', error);
+      }
+    }
+
     const userMessage: Message = {
       role: 'user',
       text: prompt,
       hasImage: !!selectedImage,
+      imageUrl: imageUrl,
+      imageFile: selectedImage ?? undefined,
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -86,8 +116,15 @@ export default function Chatbot() {
     try {
       const formData = new FormData();
       formData.append('prompt', prompt);
-      formData.append('history', JSON.stringify(messages));
 
+      // Crear historial sin imágenes para Gemini (solo texto)
+      const historialParaGemini = messages.map(msg => ({
+        role: msg.role,
+        text: msg.text,
+      }));
+      formData.append('history', JSON.stringify(historialParaGemini));
+
+      // Solo enviar la imagen actual a Gemini
       if (selectedImage) {
         formData.append('image', selectedImage);
       }
@@ -154,6 +191,14 @@ export default function Chatbot() {
     }
   };
 
+  const openImageModal = (imageUrl: string) => {
+    setExpandedImage(imageUrl);
+  };
+
+  const closeImageModal = () => {
+    setExpandedImage(null);
+  };
+
   return (
     <section
       id="chatbot"
@@ -192,7 +237,7 @@ export default function Chatbot() {
                 <div
                   className={`${
                     msg.role === 'user'
-                      ? 'max-w-md px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                      ? 'max-w-xl px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white'
                       : 'max-w-4xl px-6 py-4 rounded-2xl bg-white border border-amber-100 text-gray-800 shadow-sm'
                   }`}
                 >
@@ -218,12 +263,33 @@ export default function Chatbot() {
                     })}
                   </div>
 
+                  {/* Imagen del usuario en el historial */}
+                  {msg.imageUrl && (
+                    <div className="mt-3">
+                      <div
+                        className="relative cursor-pointer group"
+                        onClick={() => openImageModal(msg.imageUrl!)}
+                      >
+                        <img
+                          src={msg.imageUrl}
+                          alt="Imagen enviada"
+                          className="w-32 h-32 object-cover rounded-lg border-2 border-white/20 hover:border-white/40 transition-all"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-all flex items-center justify-center">
+                          <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-sm font-medium">
+                            📷 Click para ampliar
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Grid de productos si existen */}
                   {msg.productos && msg.productos.length > 0 && (
                     <ProductGrid productos={msg.productos} />
                   )}
 
-                  {msg.hasImage && (
+                  {msg.hasImage && !msg.imageUrl && (
                     <div className="text-xs opacity-75 mt-2 flex items-center gap-1">
                       <span>📷</span>
                       <span>Imagen adjunta</span>
@@ -261,11 +327,21 @@ export default function Chatbot() {
           <div className="p-6 bg-white border-t border-amber-100">
             {selectedImage && (
               <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-amber-600">📷</span>
-                  <span className="text-sm text-gray-700">
-                    Imagen: {selectedImage.name}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={URL.createObjectURL(selectedImage)}
+                    alt="Preview"
+                    className="w-12 h-12 object-cover rounded border border-amber-300"
+                  />
+                  <div>
+                    <span className="text-amber-600">📷</span>
+                    <span className="text-sm text-gray-700 ml-2">
+                      {selectedImage.name}
+                    </span>
+                    <div className="text-xs text-gray-500">
+                      {(selectedImage.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={removeImage}
@@ -344,6 +420,29 @@ export default function Chatbot() {
           </p>
         </div>
       </div>
+
+      {/* Modal de imagen expandida */}
+      {expandedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={closeImageModal}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <img
+              src={expandedImage}
+              alt="Imagen expandida"
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={e => e.stopPropagation()}
+            />
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/70 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Estilos CSS para scrollbar */}
       <style jsx>{`
