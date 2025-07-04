@@ -192,7 +192,7 @@ ${consulta}`;
 
     if (productosFinales.length === 0) {
       return await generarRespuestaFinal(
-        productosFiltrados.slice(0, 3),
+        productosFiltrados.slice(0, 8),
         true,
         consulta
       );
@@ -309,7 +309,7 @@ INSTRUCCIONES:
 3. Si es consulta de producto, clasifica categorías relevantes múltiples
 
 DETECCIÓN DE CONSULTAS AMBIGUAS:
-- Si la consulta es muy general sin especificar edad/género/tipo, marca como "requiere_mas_info"
+- Si la consulta es muy general sin especificar edad/género/tipo, marca como "requiere_mas_info". Hay excepciones, por ejemplo bolsos, mochilas, ropa de maternidad ya que estas no tienen edad o género específico. Si dicen un tipo de producto en general, no es ambigua, pero si dicen "algo bonito", "para regalo", "¿qué tienen?", etc. entonces es ambigua.
 - Ejemplos de consultas ambiguas: "Para regalo", "¿Qué tienen?", "Algo bonito", "Productos"
 
 RESPONDE CON JSON:

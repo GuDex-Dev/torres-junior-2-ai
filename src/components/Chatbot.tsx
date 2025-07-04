@@ -34,20 +34,6 @@ export default function Chatbot() {
     }
   }, [isFirstLoad]);
 
-  // Auto-scroll al final del chat
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-    // Ocultar scrollbar temporalmente cuando se cargan nuevos mensajes
-    const chatContainer = document.querySelector('.chat-messages');
-    if (chatContainer && !loading) {
-      chatContainer.classList.add('hide-scrollbar');
-      setTimeout(() => {
-        chatContainer.classList.remove('hide-scrollbar');
-      }, 1500);
-    }
-  }, [messages, loading]);
-
   // Función para procesar respuesta y extraer productos
   const procesarRespuestaConProductos = async (respuesta: string) => {
     const marcadorRegex = /\[PRODUCTOS:([\w,]+)\]/;
