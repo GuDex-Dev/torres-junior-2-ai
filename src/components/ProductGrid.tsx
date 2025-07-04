@@ -1,16 +1,14 @@
-// components/ProductCarousel.tsx
 'use client';
-
 import { useState } from 'react';
 import { Producto } from '@/types/producto';
 import ProductCard from './ProductCard';
 import ProductModal from './ProductModal';
 
-interface ProductCarouselProps {
+interface ProductGridProps {
   productos: Producto[];
 }
 
-export default function ProductCarousel({ productos }: ProductCarouselProps) {
+export default function ProductGrid({ productos }: ProductGridProps) {
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(
     null
   );
@@ -29,9 +27,9 @@ export default function ProductCarousel({ productos }: ProductCarouselProps) {
   if (productos.length === 0) return null;
 
   return (
-    <div className="my-4">
-      {/* Carrusel horizontal */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="my-6">
+      {/* Grid responsivo de productos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {productos.map(producto => (
           <ProductCard
             key={producto.id}
@@ -49,17 +47,6 @@ export default function ProductCarousel({ productos }: ProductCarouselProps) {
           onClose={handleCloseModal}
         />
       )}
-
-      {/* Estilos para ocultar scrollbar */}
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 }

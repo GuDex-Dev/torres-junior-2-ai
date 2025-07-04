@@ -1,10 +1,9 @@
-// components/Chatbot.tsx
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { MENSAJE_BIENVENIDA } from '@/lib/prompts';
 import { obtenerProductoPorId } from '@/lib/productos';
 import { Producto } from '@/types/producto';
-import ProductCarousel from './ProductCarousel';
+import ProductGrid from './ProductGrid';
 
 interface Message {
   role: 'user' | 'model';
@@ -38,6 +37,15 @@ export default function Chatbot() {
   // Auto-scroll al final del chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+    // Ocultar scrollbar temporalmente cuando se cargan nuevos mensajes
+    const chatContainer = document.querySelector('.chat-messages');
+    if (chatContainer && !loading) {
+      chatContainer.classList.add('hide-scrollbar');
+      setTimeout(() => {
+        chatContainer.classList.remove('hide-scrollbar');
+      }, 1500);
+    }
   }, [messages, loading]);
 
   // Función para procesar respuesta y extraer productos
@@ -163,34 +171,31 @@ export default function Chatbot() {
   return (
     <section
       id="chatbot"
-      className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12"
+      className="max-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-2 pt-20"
       ref={chatEndRef}
     >
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header del Chatbot */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+      <div className="max-w-9/12 mx-auto p-2">
+        {/* Header del Chatbot - MÁS COMPACTO */}
+        <div className="text-center mb-2">
+          <div className="inline-flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-lg">🤖</span>
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-900">
                 Asistente Virtual
+                <p className="text-amber-600 font-medium text-2xl">
+                  Torres Jr. 2
+                </p>
               </h2>
-              <p className="text-amber-600 font-medium">Torres Jr. 2</p>
             </div>
           </div>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Pregúntame sobre nuestros productos, tallas, colores, precios y
-            disponibilidad. ¡Estoy aquí para ayudarte a encontrar exactamente lo
-            que buscas!
-          </p>
         </div>
 
-        {/* Chat Container */}
+        {/* Chat Container - MÁS ALTO Y ANCHO */}
         <div className="bg-white rounded-2xl shadow-xl border border-orange-100 overflow-hidden">
-          {/* Chat Messages */}
-          <div className="h-96 overflow-y-auto p-6 bg-gray-50 space-y-4">
+          {/* Chat Messages - ALTURA AUMENTADA */}
+          <div className="h-[500px] overflow-y-auto p-6 bg-gray-50 space-y-6 chat-messages">
             {messages.map((msg, i) => (
               <div
                 key={i}
@@ -199,10 +204,10 @@ export default function Chatbot() {
                 }`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                  className={`${
                     msg.role === 'user'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                      : 'bg-white border border-amber-100 text-gray-800 shadow-sm'
+                      ? 'max-w-md px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                      : 'max-w-4xl px-6 py-4 rounded-2xl bg-white border border-amber-100 text-gray-800 shadow-sm'
                   }`}
                 >
                   {/* Renderizar mensaje con formato básico */}
@@ -212,7 +217,7 @@ export default function Chatbot() {
                         return (
                           <div
                             key={index}
-                            className="flex items-start gap-2 mb-1"
+                            className="flex items-start gap-2 mb-2"
                           >
                             <span className="text-amber-500 font-bold">•</span>
                             <span>{line.replace('•', '').trim()}</span>
@@ -227,9 +232,9 @@ export default function Chatbot() {
                     })}
                   </div>
 
-                  {/* Carrusel de productos si existen */}
+                  {/* Grid de productos si existen */}
                   {msg.productos && msg.productos.length > 0 && (
-                    <ProductCarousel productos={msg.productos} />
+                    <ProductGrid productos={msg.productos} />
                   )}
 
                   {msg.hasImage && (
@@ -244,8 +249,8 @@ export default function Chatbot() {
 
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white border border-amber-100 rounded-2xl px-4 py-3 shadow-sm">
-                  <div className="flex items-center gap-2">
+                <div className="bg-white border border-amber-100 rounded-2xl px-6 py-4 shadow-sm">
+                  <div className="flex items-center gap-3">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
                       <div
@@ -346,13 +351,43 @@ export default function Chatbot() {
         </div>
 
         {/* Info adicional */}
-        <div className="text-center mt-6 text-sm text-gray-600">
+        <div className="text-center mt-4 text-sm text-gray-600">
           <p>
             💡 <strong>Tip:</strong> Puedes preguntar por productos específicos,
             tallas, colores, precios y stock disponible
           </p>
         </div>
       </div>
+
+      {/* Estilos CSS para scrollbar */}
+      <style jsx>{`
+        .chat-messages::-webkit-scrollbar {
+          width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+          background: #d97706;
+          border-radius: 10px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+          background: #b45309;
+        }
+        .hide-scrollbar {
+          overflow: hidden !important;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+
+        /* Scroll suave para anclas */
+        html {
+          scroll-behavior: smooth;
+          scroll-padding-top: 80px;
+        }
+      `}</style>
     </section>
   );
 }
