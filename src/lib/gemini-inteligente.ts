@@ -21,6 +21,8 @@ interface AnalisisConsulta {
   esConsultaSeguimiento: boolean;
   productosAnteriores?: string[];
   clasificacion?: ClasificacionCategoria;
+  requiere_mas_info?: boolean;
+  pregunta_sugerida?: string;
 }
 
 interface ProductosSeleccionados {
@@ -70,6 +72,14 @@ export async function chatWithGeminiInteligente(
       return await manejarConsultaSeguimiento(
         consulta,
         analisis.productosAnteriores
+      );
+    }
+
+    if (analisis.requiere_mas_info) {
+      console.log('❓ Consulta ambigua, pidiendo más detalles');
+      return (
+        analisis.pregunta_sugerida ||
+        '¿Podrías ser más específico? ¿Para quién es y qué edad tiene?'
       );
     }
 
@@ -277,15 +287,26 @@ INSTRUCCIONES:
 2. Si hay productos mencionados antes, detecta si es consulta de seguimiento
 3. Si es consulta de producto, clasifica categorías relevantes múltiples
 
+DETECCIÓN DE CONSULTAS AMBIGUAS:
+- Si la consulta es muy general sin especificar edad/género/tipo, marca como "requiere_mas_info"
+- Ejemplos de consultas ambiguas: "Para regalo", "¿Qué tienen?", "Algo bonito", "Productos"
+
 RESPONDE CON JSON:
 {
   "esConsultaProducto": true/false,
   "esConsultaSeguimiento": true/false,
+  "requiere_mas_info": true/false,
+  "pregunta_sugerida": "¿Para quién es el regalo? ¿Bebé, niño, niña o adulto?",
   "clasificacion": {
-    "categorias": ["categoria1", "categoria2"],
-    "subcategorias": ["sub1", "sub2"]
+    "categorias": ["categoria1"],
+    "subcategorias": ["sub1"]
   }
 }
+
+EJEMPLOS:
+- "Para regalo" → {"esConsultaProducto": true, "requiere_mas_info": true, "pregunta_sugerida": "¿Para quién es el regalo? ¿Bebé, niña, niño o mamá?"}
+- "¿Qué tienen?" → {"esConsultaProducto": true, "requiere_mas_info": true, "pregunta_sugerida": "¿Qué tipo de producto buscas? ¿Ropa, accesorios, o algo específico?"}
+- "Algo bonito" → {"esConsultaProducto": true, "requiere_mas_info": true, "pregunta_sugerida": "¿Para qué ocasión y qué edad?"}
 
 EJEMPLOS:
 - "¿Cuál es su horario?" → {"esConsultaProducto": false}
@@ -418,7 +439,7 @@ async function filtrarProductosPorIA(
       ),
     }));
 
-    const prompt = `Analiza la consulta del cliente y selecciona los productos MÁS RELEVANTES basándote tanto en el NOMBRE como en la DESCRIPCIÓN.
+    const prompt = `Analiza la consulta del cliente y selecciona ÚNICAMENTE los productos MÁS APROPIADOS.
 
 CONSULTA: "${consulta}"
 
@@ -434,19 +455,31 @@ STOCK: ${p.stock_total} | PRECIO: S/ ${p.precio_min}+`
   )
   .join('\n\n')}
 
-INSTRUCCIONES DE ANÁLISIS:
-- Analiza tanto el NOMBRE como la DESCRIPCIÓN de cada producto
-- Busca coincidencias de palabras clave en ambos campos
-- Considera sinónimos y términos relacionados
-- Prioriza productos con mayor relevancia semántica
-- Si la consulta es "ropa para bebé", busca en nombres Y descripciones que mencionen "bebé", "recién nacido", etc.
-- Si es "mochilas", busca tanto productos con "mochila" en el nombre como en la descripción
-- Máximo 8 productos más relevantes
-- Prioriza productos con stock disponible
-- Responde SOLO con JSON válido
+REGLAS ESTRICTAS DE FILTRADO:
+🚫 SI la consulta menciona "niña de 2 años":
+   - NO selecciones productos que digan "para niño"
+   - NO selecciones "Bodies para bebé" (muy pequeños)
+   - NO selecciones "Polos de niño"
+   - SÍ selecciona "Conjuntos para niñas"
+   - SÍ selecciona productos unisex apropiados
+   - SÍ selecciona "Zapatitos", "Pantalones infantiles"
+
+🚫 SI la consulta menciona "bebé":
+   - SÍ selecciona "Bodies para bebé", "Ajuares", "Cargadores"
+   - NO selecciones ropa para niños grandes
+
+🚫 SI la consulta menciona "embarazada" o "maternidad":
+   - SOLO selecciona productos de "Maternidad"
+
+INSTRUCCIONES:
+- Lee cuidadosamente el NOMBRE del producto
+- Verifica que el género sea apropiado
+- Verifica que la edad sea apropiada
+- Máximo 3 productos MÁS APROPIADOS
+- Si NO hay productos apropiados, devuelve array vacío
 
 FORMATO:
-{"productos_seleccionados": ["id1", "id2", "id3", "id4", "id5", "id6"]}`;
+{"productos_seleccionados": ["id1", "id2", "id3"]}`;
 
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -510,7 +543,7 @@ async function validarEspecificaciones(
       };
     });
 
-    const prompt = `Analiza si los productos cumplen con especificaciones específicas de la consulta.
+    const prompt = `Analiza si los productos son APROPIADOS y cumplen con la consulta específica.
 
 CONSULTA: "${consulta}"
 
@@ -524,11 +557,18 @@ ${productosDetallados
   )
   .join('\n')}
 
-INSTRUCCIONES:
-- Si la consulta especifica color/talla/precio, filtra productos que cumplan
-- Si NO especifica detalles, devuelve todos los productos
-- Si NO hay coincidencias exactas, marca como "similares"
-- Máximo 6 productos finales
+INSTRUCCIONES CRÍTICAS:
+- VERIFICA que los productos sean apropiados para la edad/género mencionado
+- Si la consulta es "niña de 2 años", EXCLUYE productos específicamente para niños
+- Si pregunta por color/talla/precio específico, filtra solo los que cumplan
+- Si NO especifica detalles específicos, devuelve productos apropiados para el perfil
+- Si NO hay productos apropiados, marca como "similares" y explica por qué
+- Máximo 3 productos más apropiados
+
+EJEMPLOS:
+- "niña de 2 años" + "Polo para niño" → NO incluir (género incorrecto)
+- "bebé" + "Conjunto de bebé" → SÍ incluir (edad apropiada)
+- "regalo niña" + "Vestido niña" → SÍ incluir (apropiado)
 
 FORMATO:
 {"productos_finales": ["id1", "id2"], "son_similares": false}`;
@@ -607,7 +647,7 @@ INSTRUCCIONES PARA RESPUESTA:
 
 ${
   esSimilar
-    ? 'FORMATO: "Encontré productos similares: [nombres y precios]. [PRODUCTOS:ids]"'
+    ? 'FORMATO: "Para tu consulta específica, estos productos podrían interesarte: [nombres y precios]. [PRODUCTOS:ids]"'
     : 'FORMATO: "Tenemos [cantidad]: [nombres y precios]. [PRODUCTOS:ids]"'
 }`;
 
