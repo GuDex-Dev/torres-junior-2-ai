@@ -617,7 +617,7 @@ ${
       config: { temperature: 0.1, topP: 0.8, topK: 10 },
     });
 
-    const respuesta =
+    let respuesta =
       result.text ||
       `${
         esSimilar
@@ -627,11 +627,17 @@ ${
 
     // Validar que incluya el marcador
     if (!respuesta.includes('[PRODUCTOS:')) {
-      return `${respuesta} [PRODUCTOS:${productIds}]`;
+      respuesta = `${respuesta} [PRODUCTOS:${productIds}]`;
     }
 
-    console.log('✅ Respuesta final generada:', respuesta);
-    return respuesta;
+    // Agregar mensaje para hacer click en productos
+    const mensajeConClick = respuesta.replace(
+      /(\[PRODUCTOS:[^\]]+\])/,
+      '$1\n\n✨ *Toca cualquier producto para ver todos los colores, tallas y detalles disponibles*'
+    );
+
+    console.log('✅ Respuesta final generada:', mensajeConClick);
+    return mensajeConClick;
   } catch (error) {
     console.error('❌ Error generando respuesta final:', error);
     const productIds = productos.map(p => p.id).join(',');
@@ -751,7 +757,7 @@ async function sugerirProductosSimilares(
   const nombres = productosAleatorios.map(p => p.nombre).join(', ');
   const ids = productosAleatorios.map(p => p.id).join(',');
 
-  return `No encontré coincidencias exactas para "${consulta}". ¿Te interesan estos productos similares: ${nombres}? [PRODUCTOS:${ids}]`;
+  return `No encontré coincidencias exactas para "${consulta}". ¿Te interesan estos productos similares: ${nombres}? [PRODUCTOS:${ids}]\n\n✨ *Toca cualquier producto para ver todos los colores, tallas y detalles disponibles*`;
 }
 
 // FUNCIONES AUXILIARES
